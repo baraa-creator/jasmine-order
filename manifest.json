@@ -1,0 +1,10 @@
+{
+  "name": "Jasmine Order",
+  "short_name": "Jasmine Order",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f1e6",
+  "theme_color": "#07101d",
+  "orientation": "portrait",
+  "icons": []
+}
