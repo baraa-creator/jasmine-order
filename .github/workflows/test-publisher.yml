@@ -1,0 +1,52 @@
+name: Test Jasmine Client Publisher
+
+on:
+  push:
+    branches:
+      - multi-client-github-system
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-publisher:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish test client
+        run: python tools/publish_client.py client-requests/client-test-001.json
+
+      - name: Verify generated client
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          path = Path("clients/client-test-001/index.html")
+          if not path.exists():
+              raise SystemExit("Generated client file was not created")
+
+          html = path.read_text(encoding="utf-8")
+          match = re.search(r"const DATA=(.*?);const ORIGINAL_DATA=", html, re.S)
+          if not match:
+              raise SystemExit("Generated client DATA marker is missing")
+
+          data = json.loads(match.group(1))
+          names = [str(b.get("name", "")).strip() for b in data.get("brands", [])]
+
+          if names != ["JASMINE"]:
+              raise SystemExit(f"Unexpected generated brands: {names}")
+
+          if 'class="admin-launch"' in html:
+              raise SystemExit("Admin launch button leaked into client")
+
+          if "window.openAdmin=()=>{};" not in html:
+              raise SystemExit("Static admin override is missing")
+
+          print("Publisher integration test passed:", path)
+          print("Published brands:", names)
+          PY
