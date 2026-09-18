@@ -20,12 +20,14 @@ on:
 
 permissions:
   contents: write
-  issues: read
+  issues: write
   pages: write
   id-token: write
 
+# Only one client publication may run at a time. This prevents two client
+# requests from publishing competing Pages artifacts at the same time.
 concurrency:
-  group: jasmine-pages
+  group: jasmine-client-publisher
   cancel-in-progress: false
 
 jobs:
@@ -35,6 +37,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,12 +61,20 @@ jobs:
           fi
 
       - name: Build client page
+        id: build_client
+        shell: bash
         run: |
           REQUEST_FILE="${{ steps.request.outputs.request_file }}"
           test -f "$REQUEST_FILE"
+
           python tools/publish_client.py "$REQUEST_FILE"
+
           CLIENT_ID=$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["id"])' "$REQUEST_FILE")
+          test -f "clients/$CLIENT_ID.html"
           test -f "clients/$CLIENT_ID/index.html"
+
+          echo "client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
+          echo "Published clients/$CLIENT_ID.html"
           echo "Published clients/$CLIENT_ID/index.html"
 
       - name: Validate master catalog
@@ -103,3 +114,47 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify published client URL
+        id: verify
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          CLIENT_ID: ${{ steps.build_client.outputs.client_id }}
+        run: |
+          CLIENT_URL="${PAGE_URL%/}/clients/${CLIENT_ID}.html"
+          echo "Checking: $CLIENT_URL"
+
+          for attempt in $(seq 1 30); do
+            STATUS=$(curl -L -sS -o /dev/null -w "%{http_code}" --max-time 20 "$CLIENT_URL" || true)
+            echo "Attempt $attempt/30 -> HTTP $STATUS"
+
+            if [ "$STATUS" = "200" ]; then
+              echo "client_url=$CLIENT_URL" >> "$GITHUB_OUTPUT"
+              echo "Client page is live: $CLIENT_URL"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "Client page was deployed but did not become reachable within the verification window."
+          exit 1
+
+      - name: Report final client URL on issue
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          CLIENT_URL: ${{ steps.verify.outputs.client_url }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body "## ✅ نسخة العميل جاهزة
+
+تم إنشاء نسخة العميل ونشرها والتحقق من أن الرابط يعيد **HTTP 200**.
+
+**الرابط النهائي:**
+$CLIENT_URL
+
+يمكن استخدام هذا الرابط مباشرة مع العميل."
