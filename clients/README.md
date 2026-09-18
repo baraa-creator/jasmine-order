@@ -8,15 +8,16 @@ This directory contains independent client builds published under the same GitHu
 jasmine-order/
 ├── index.html
 └── clients/
+    ├── client-<unique-id>.html
     ├── client-<unique-id>/
-    │   └── index.html
+    │   └── index.html   (legacy compatibility)
     └── ...
 ```
 
 ## Client URL
 
 ```text
-https://baraa-creator.github.io/jasmine-order/clients/<unique-id>/
+https://baraa-creator.github.io/jasmine-order/clients/<unique-id>.html
 ```
 
 Each client build must contain only the brands/data assigned to that client and must remain independent from other client builds.
