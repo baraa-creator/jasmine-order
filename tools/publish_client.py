@@ -27,13 +27,26 @@ try:
 except json.JSONDecodeError as exc:
     raise SystemExit(f"Could not parse embedded DATA: {exc}") from exc
 
-brands = data.get("brands", [])
-filtered = [
-    b for b in brands
-    if str(b.get("name", "")).strip().lower() in selected
-]
+# Prefer the catalog snapshot captured by the Admin Panel at client creation.
+# This guarantees that disabled/deleted products, sizes, and fragrances do not
+# reappear in a newly generated client merely because index.html still contains
+# the master/original catalog.
+snapshot = request.get("catalog")
+if isinstance(snapshot, list) and snapshot:
+    filtered = [
+        b for b in snapshot
+        if isinstance(b, dict)
+        and str(b.get("name", "")).strip().lower() in selected
+    ]
+else:
+    brands = data.get("brands", [])
+    filtered = [
+        b for b in brands
+        if str(b.get("name", "")).strip().lower() in selected
+    ]
+
 if not filtered:
-    raise SystemExit("No selected brands exist in master catalog")
+    raise SystemExit("No selected brands exist in the client request/master catalog")
 
 client_data = {
     "settings": data.get("settings", {}),
