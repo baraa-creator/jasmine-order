@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       client_id:
-        description: "Client ID, e.g. client-001"
+        description: "Client ID"
         required: true
         type: string
       client_name:
@@ -15,15 +15,16 @@ on:
         description: "JSON array of brand names"
         required: true
         type: string
-  push:
-    paths:
-      - "client-requests/*.json"
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
+  issues: read
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.actor == github.repository_owner && startsWith(github.event.issue.title, '[JASMINE CLIENT]'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,20 +34,22 @@ jobs:
         id: request
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
           INPUT_CLIENT_ID: ${{ inputs.client_id }}
           INPUT_CLIENT_NAME: ${{ inputs.client_name }}
           INPUT_BRANDS_JSON: ${{ inputs.brands_json }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          if [ -n "$INPUT_CLIENT_ID" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             python tools/make_client_request.py "$INPUT_CLIENT_ID" "$INPUT_CLIENT_NAME" "$INPUT_BRANDS_JSON"
             echo "request_file=client-requests/$INPUT_CLIENT_ID.json" >> "$GITHUB_OUTPUT"
           else
-            echo "request_file=$(ls client-requests/*.json | head -n 1)" >> "$GITHUB_OUTPUT"
+            python tools/make_issue_request.py "$ISSUE_BODY"
+            echo "request_file=$(ls client-requests/*.json | tail -n 1)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build client page
-        run: |
-          python tools/publish_client.py "${{ steps.request.outputs.request_file }}"
+        run: python tools/publish_client.py "${{ steps.request.outputs.request_file }}"
 
       - name: Commit published client
         run: |
