@@ -149,12 +149,14 @@ jobs:
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           CLIENT_URL: ${{ steps.verify.outputs.client_url }}
+          BODY: |
+            ## ✅ نسخة العميل جاهزة
+
+            تم إنشاء نسخة العميل ونشرها والتحقق من أن الرابط يعيد **HTTP 200**.
+
+            **الرابط النهائي:**
+            $CLIENT_URL
+
+            يمكن استخدام هذا الرابط مباشرة مع العميل.
         run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body "## ✅ نسخة العميل جاهزة
-
-تم إنشاء نسخة العميل ونشرها والتحقق من أن الرابط يعيد **HTTP 200**.
-
-**الرابط النهائي:**
-$CLIENT_URL
-
-يمكن استخدام هذا الرابط مباشرة مع العميل."
+          gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body "$BODY"
