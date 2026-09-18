@@ -90,10 +90,25 @@ client_html = client_html.replace(
     1,
 )
 
-out_dir = pathlib.Path("clients") / client_id
-out_dir.mkdir(parents=True, exist_ok=True)
-(out_dir / "index.html").write_text(
+# GitHub Pages project sites are most reliable when client URLs point to an
+# explicit .html file instead of relying on directory-index routing.
+# Keep the directory/index.html copy for backward compatibility, but make the
+# canonical published URL clients/<id>.html.
+clients_dir = pathlib.Path("clients")
+clients_dir.mkdir(parents=True, exist_ok=True)
+
+canonical_path = clients_dir / f"{client_id}.html"
+canonical_path.write_text(
     "<!doctype html>\n" + client_html,
     encoding="utf-8",
 )
-print(f"Published clients/{client_id}/index.html")
+
+legacy_dir = clients_dir / client_id
+legacy_dir.mkdir(parents=True, exist_ok=True)
+(legacy_dir / "index.html").write_text(
+    "<!doctype html>\n" + client_html,
+    encoding="utf-8",
+)
+
+print(f"Published {canonical_path}")
+print(f"Published legacy {legacy_dir / 'index.html'}")
