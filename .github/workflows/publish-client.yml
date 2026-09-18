@@ -26,8 +26,10 @@ permissions:
 
 # Only one client publication may run at a time. This prevents two client
 # requests from publishing competing Pages artifacts at the same time.
+# Serialize Multi-Client publishing with every other production Pages deploy.
+# This prevents two different artifacts from racing on the same Pages site.
 concurrency:
-  group: jasmine-client-publisher
+  group: github-pages-production
   cancel-in-progress: false
 
 jobs:
