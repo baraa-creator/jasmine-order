@@ -1,0 +1,58 @@
+name: Publish Jasmine Client
+
+on:
+  workflow_dispatch:
+    inputs:
+      client_id:
+        description: "Client ID, e.g. client-001"
+        required: true
+        type: string
+      client_name:
+        description: "Client name"
+        required: true
+        type: string
+      brands_json:
+        description: "JSON array of brand names"
+        required: true
+        type: string
+  push:
+    paths:
+      - "client-requests/*.json"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve request
+        id: request
+        shell: bash
+        env:
+          INPUT_CLIENT_ID: ${{ inputs.client_id }}
+          INPUT_CLIENT_NAME: ${{ inputs.client_name }}
+          INPUT_BRANDS_JSON: ${{ inputs.brands_json }}
+        run: |
+          if [ -n "$INPUT_CLIENT_ID" ]; then
+            python tools/make_client_request.py "$INPUT_CLIENT_ID" "$INPUT_CLIENT_NAME" "$INPUT_BRANDS_JSON"
+            echo "request_file=client-requests/$INPUT_CLIENT_ID.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "request_file=$(ls client-requests/*.json | head -n 1)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build client page
+        run: |
+          python tools/publish_client.py "${{ steps.request.outputs.request_file }}"
+
+      - name: Commit published client
+        run: |
+          git config user.name "Jasmine Client Publisher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clients client-requests
+          git diff --cached --quiet && exit 0
+          git commit -m "Publish Jasmine client"
+          git push
