@@ -44,12 +44,18 @@ jobs:
             python tools/make_client_request.py "$INPUT_CLIENT_ID" "$INPUT_CLIENT_NAME" "$INPUT_BRANDS_JSON"
             echo "request_file=client-requests/$INPUT_CLIENT_ID.json" >> "$GITHUB_OUTPUT"
           else
-            python tools/make_issue_request.py "$ISSUE_BODY"
-            echo "request_file=$(ls client-requests/*.json | tail -n 1)" >> "$GITHUB_OUTPUT"
+            REQUEST_FILE=$(python tools/make_issue_request.py "$ISSUE_BODY")
+            echo "request_file=$REQUEST_FILE" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build client page
-        run: python tools/publish_client.py "${{ steps.request.outputs.request_file }}"
+        run: |
+          REQUEST_FILE="${{ steps.request.outputs.request_file }}"
+          test -f "$REQUEST_FILE"
+          python tools/publish_client.py "$REQUEST_FILE"
+          CLIENT_ID=$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["id"])' "$REQUEST_FILE")
+          test -f "clients/$CLIENT_ID/index.html"
+          echo "Published clients/$CLIENT_ID/index.html"
 
       - name: Commit published client
         run: |
