@@ -149,14 +149,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           CLIENT_URL: ${{ steps.verify.outputs.client_url }}
-          BODY: |
-            ## ✅ نسخة العميل جاهزة
-
-            تم إنشاء نسخة العميل ونشرها والتحقق من أن الرابط يعيد **HTTP 200**.
-
-            **الرابط النهائي:**
-            $CLIENT_URL
-
-            يمكن استخدام هذا الرابط مباشرة مع العميل.
         run: |
+          BODY=$(printf '## ✅ نسخة العميل جاهزة\\n\\nتم إنشاء نسخة العميل ونشرها والتحقق من أن الرابط يعيد **HTTP 200**.\\n\\n**الرابط النهائي:**\\n%s\\n\\nيمكن استخدام هذا الرابط مباشرة مع العميل.' "$CLIENT_URL")
           gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body "$BODY"
