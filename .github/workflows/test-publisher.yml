@@ -41,10 +41,14 @@ jobs:
           import re
           from pathlib import Path
 
-          path = Path("clients/client-test-001/index.html")
-          if not path.exists():
-              raise SystemExit("Generated client file was not created")
+          canonical = Path("clients/client-test-001.html")
+          legacy = Path("clients/client-test-001/index.html")
+          if not canonical.exists():
+              raise SystemExit("Canonical generated client file was not created")
+          if not legacy.exists():
+              raise SystemExit("Legacy generated client file was not created")
 
+          path = canonical
           html = path.read_text(encoding="utf-8")
           match = re.search(r"const DATA=(.*?);const ORIGINAL_DATA=", html, re.S)
           if not match:
@@ -63,5 +67,7 @@ jobs:
               raise SystemExit("Static admin override is missing")
 
           print("Publisher integration test passed:", path)
+          print("Legacy client path also present:", legacy)
+          print("Canonical client URL path: /clients/client-test-001.html")
           print("Published brands:", names)
           PY
