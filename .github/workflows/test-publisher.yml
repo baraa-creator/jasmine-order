@@ -3,7 +3,8 @@ name: Test Jasmine Client Publisher
 on:
   push:
     branches:
-      - multi-client-github-system
+      - main
+      - fix/multi-client-pages-catalog
   pull_request:
 
 permissions:
@@ -15,6 +16,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify master catalog
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          html=Path("index.html").read_text(encoding="utf-8")
+          m=re.search(r"const DATA=(.*?);const ORIGINAL_DATA=",html,re.S)
+          if not m: raise SystemExit("Master DATA marker is missing")
+          names=[str(b.get("name","")).strip() for b in json.loads(m.group(1)).get("brands",[])]
+          expected=["JASMINE","LUVEAL","CAVAYELO","MAROTA","Pure Passion","Jasmine Niche","Vilara"]
+          if names!=expected: raise SystemExit(f"Unexpected master brands: {names}")
+          print("Master catalog test passed:",names)
+          PY
 
       - name: Publish test client
         run: python tools/publish_client.py client-requests/client-test-001.json
