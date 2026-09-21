@@ -15,6 +15,10 @@ on:
         description: "JSON array of brand names"
         required: true
         type: string
+      catalog_json:
+        description: "Current catalog snapshot JSON"
+        required: true
+        type: string
   issues:
     types: [opened]
 
@@ -52,10 +56,11 @@ jobs:
           INPUT_CLIENT_ID: ${{ inputs.client_id }}
           INPUT_CLIENT_NAME: ${{ inputs.client_name }}
           INPUT_BRANDS_JSON: ${{ inputs.brands_json }}
+          INPUT_CATALOG_JSON: ${{ inputs.catalog_json }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            python tools/make_client_request.py "$INPUT_CLIENT_ID" "$INPUT_CLIENT_NAME" "$INPUT_BRANDS_JSON"
+            python tools/make_client_request.py "$INPUT_CLIENT_ID" "$INPUT_CLIENT_NAME" "$INPUT_BRANDS_JSON" "$INPUT_CATALOG_JSON"
             echo "request_file=client-requests/$INPUT_CLIENT_ID.json" >> "$GITHUB_OUTPUT"
           else
             REQUEST_FILE=$(python tools/make_issue_request.py "$ISSUE_BODY")
