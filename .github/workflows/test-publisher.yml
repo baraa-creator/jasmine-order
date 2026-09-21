@@ -34,6 +34,9 @@ jobs:
       - name: Publish test client
         run: python tools/publish_client.py client-requests/client-test-001.json
 
+      - name: Publish selection v2 test client
+        run: python tools/publish_client.py client-requests/client-selection-v2-test.json
+
       - name: Verify generated client
         run: |
           python - <<'PY'
@@ -70,4 +73,26 @@ jobs:
           print("Legacy client path also present:", legacy)
           print("Canonical client URL path: /clients/client-test-001.html")
           print("Published brands:", names)
+
+      - name: Verify selection v2 client
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          html=Path("clients/client-selection-v2-test.html").read_text(encoding="utf-8")
+          m=re.search(r"const DATA=(.*?);const ORIGINAL_DATA=",html,re.S)
+          if not m: raise SystemExit("V2 generated DATA marker is missing")
+          data=json.loads(m.group(1))
+          brands=data.get("brands",[])
+          if [b.get("name") for b in brands] != ["Vilara"]:
+              raise SystemExit("V2 brand filter failed")
+          products=brands[0].get("products",[])
+          if len(products)!=2: raise SystemExit(f"Expected 2 products, got {len(products)}")
+          room=next(p for p in products if p.get("name")=="Room Spray")
+          if room["sizes"][0]["fragrances"] != ["Strawberry","Spring"]:
+              raise SystemExit("V2 fragrance selection failed for Room Spray")
+          reed=next(p for p in products if p.get("name")=="Reed Diffuser")
+          if reed["sizes"][0]["fragrances"] != ["Tulip"]:
+              raise SystemExit("V2 fragrance selection failed for Reed Diffuser")
+          print("Selection V2 integration test passed")
           PY

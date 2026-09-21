@@ -9,6 +9,7 @@ client_id = field("CLIENT_ID")
 client_name = field("CLIENT_NAME")
 brands_raw = field("BRANDS_JSON")
 catalog_raw = field("CATALOG_JSON")
+snapshot_version = field("CATALOG_SNAPSHOT_VERSION") or "1"
 if not client_id or not client_name or not brands_raw:
     raise SystemExit("Issue body is missing CLIENT_ID, CLIENT_NAME or BRANDS_JSON")
 brands = json.loads(brands_raw)
@@ -22,6 +23,8 @@ if not catalog_raw:
     )
 
 catalog = json.loads(catalog_raw)
+if snapshot_version not in {"1","2"}:
+    raise SystemExit("Unsupported CATALOG_SNAPSHOT_VERSION")
 if not isinstance(catalog, list) or not catalog:
     raise SystemExit("CATALOG_JSON must be a non-empty JSON array")
 
@@ -37,7 +40,7 @@ payload = {
     "name":client_name,
     "brands":brands,
     "catalog":catalog,
-    "catalogSnapshotVersion":1
+    "catalogSnapshotVersion":int(snapshot_version)
 }
 out.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
 print(out)

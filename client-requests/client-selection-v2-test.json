@@ -1,0 +1,38 @@
+{
+  "id": "client-selection-v2-test",
+  "name": "Client Selection V2 Test",
+  "brands": [
+    "Vilara"
+  ],
+  "catalog": [
+    {
+      "name": "Vilara",
+      "products": [
+        {
+          "name": "Room Spray",
+          "sizes": [
+            {
+              "name": "300",
+              "fragrances": [
+                "Strawberry",
+                "Spring"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Reed Diffuser",
+          "sizes": [
+            {
+              "name": "110",
+              "fragrances": [
+                "Tulip"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "catalogSnapshotVersion": 2
+}
