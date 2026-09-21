@@ -1,0 +1,91 @@
+{
+  "id": "jasmine-1-5",
+  "name": "Jasmine 1.5",
+  "brands": [
+    "JASMINE"
+  ],
+  "catalog": [
+    {
+      "name": "JASMINE",
+      "products": [
+        {
+          "name": "Room Spray",
+          "sizes": [
+            {
+              "name": "260",
+              "fragrances": [
+                "Vanilla",
+                "Melon"
+              ],
+              "piecesPerBox": 24,
+              "boxesPerPallet": 90,
+              "kgPerBox": 6.5
+            },
+            {
+              "name": "500",
+              "fragrances": [
+                "Vanilla",
+                "Melon"
+              ],
+              "piecesPerBox": 25,
+              "boxesPerPallet": 48,
+              "kgPerBox": 13.15
+            }
+          ]
+        },
+        {
+          "name": "Reed Diffuser",
+          "sizes": [
+            {
+              "name": "110",
+              "fragrances": [
+                "Blueberry",
+                "Strawberry"
+              ],
+              "piecesPerBox": 24,
+              "boxesPerPallet": 182,
+              "kgPerBox": 5.7
+            }
+          ]
+        },
+        {
+          "name": "Perfumes",
+          "sizes": [
+            {
+              "name": "35",
+              "fragrances": [
+                "Eventus",
+                "Stronger",
+                "Diplomatic",
+                "Solfaj",
+                "Tom",
+                "Dizair",
+                "Bella",
+                "Shel",
+                "Scandol",
+                "Girl",
+                "Si",
+                "Pink"
+              ],
+              "piecesPerBox": 70,
+              "boxesPerPallet": 42,
+              "kgPerBox": 11
+            },
+            {
+              "name": "100",
+              "fragrances": [
+                "Ela",
+                "Platin",
+                "Muhur"
+              ],
+              "piecesPerBox": 12,
+              "boxesPerPallet": 42,
+              "kgPerBox": 7.9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "catalogSnapshotVersion": 2
+}
