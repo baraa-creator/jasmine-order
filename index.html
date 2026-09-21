@@ -679,16 +679,16 @@ async function exportClientBuildFromCatalog(catalog,suggested){
     const dataStart=js.indexOf('const DATA='), dataEnd=js.indexOf(';function displaySize',dataStart);
     if(dataStart<0||dataEnd<0)throw new Error('Catalog DATA marker not found');
     const clientData={settings:DATA.settings,brands:snapshot};
-    const literal=JSON.stringify(clientData).replace(/<\\/script/gi,'<\\\\/script');
+    const literal=JSON.stringify(clientData).replace(/<\/script/gi,'<\\/script');
     js=js.slice(0,dataStart)+'const DATA='+literal+js.slice(dataEnd);
+    const initCode="document.addEventListener('DOMContentLoaded',()=>{try{loadSavedAdminData();applyPackagingDefaults();persistCatalog();applyUISettings();initProductSelectors();fillBrands();render();translateHome();}catch(e){console.error('JASMINE initialization error',e);}});";
+    const clientInit="document.addEventListener('DOMContentLoaded',()=>{try{initProductSelectors();fillBrands();render();translateHome();}catch(e){console.error('JASMINE client initialization error',e);}});";
+    if(js.includes(initCode)) js=js.replace(initCode,clientInit);
+    js=js.replace(/window\.openAdmin\s*=\s*[^;]+;/g,'window.openAdmin=()=>{};');
     js += "\nfunction getVisibleBrandNames(){return brands.map(b=>b.name);}\nfunction visibleBrandIndexes(){return brands.map((_,i)=>i);}\nfunction loadSavedAdminData(){return;}\n";
-    js=js.replace(/document\\.addEventListener\\('DOMContentLoaded',\\(\\)=>\\{try\\{loadSavedAdminData\\(\\);applyPackagingDefaults\\(\\);persistCatalog\\(\\);applyUISettings\\(\\);initProductSelectors\\(\\);fillBrands\\(\\);render\\(\\);translateHome\\(\\);\\}catch\\(e\\)\\{console\\.error\\('JASMINE initialization error',e\\);\\}\\}\\);/,
-      "document.addEventListener('DOMContentLoaded',()=>{try{initProductSelectors();fillBrands();render();translateHome();}catch(e){console.error('JASMINE client initialization error',e);}});");
-    js=js.replace(/window\\.openAdmin\\s*=\\s*[^;]+;/g,'window.openAdmin=()=>{};');
     script.textContent=js;
-    const html='<!doctype html>\\n'+root.outerHTML;
-    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-    downloadBlob(blob,suggested);
+    const html='<!doctype html>\n'+root.outerHTML;
+    downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),suggested);
     showStatus('clientBuildStatus','تم تصدير نسخة العميل المخصصة بنجاح.');
   }catch(e){console.error('exportClientBuildFromCatalog',e);alert('تعذر تصدير نسخة العميل: '+(e?.message||'خطأ غير معروف'))}
 }
