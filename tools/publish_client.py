@@ -38,7 +38,7 @@ if not isinstance(snapshot, list) or not snapshot:
         "CATALOG_JSON is required for client publishing. "
         "Refusing to fall back to the master catalog because that could publish deleted products/sizes/fragrances."
     )
-if str(snapshot_version or "1") != "1":
+if str(snapshot_version or "1") not in {"1","2"}:
     raise SystemExit(f"Unsupported catalog snapshot version: {snapshot_version}")
 
 snapshot_names = {str(b.get("name", "")).strip().lower() for b in snapshot if isinstance(b, dict)}
