@@ -318,7 +318,7 @@ function adminTab(tab){
   const key=tab==='products'?'Products':tab==='ui'?'UI':tab==='clients'?'Clients':'Backup';
   const active=$('tab'+key);if(active)active.classList.add('active');
   if(tab==='ui') loadUIForm();
-  if(tab==='clients') initClientBuildManager();
+  if(tab==='clients'){initClientBuildManager();if(typeof renderClientSelectionTree==='function')renderClientSelectionTree();}
 }
 function persistCatalog(){localStorage.setItem('jasmine_catalog',JSON.stringify({catalogVersion:2,brands:DATA.brands,visibleBrands:getVisibleBrandNames()}));}
 function adminRender(){
@@ -533,7 +533,10 @@ function clientBuilds(){try{const x=JSON.parse(safeLSGet('jasmine_client_builds'
 function saveClientBuilds(x){safeLSSet('jasmine_client_builds',JSON.stringify(x));renderClientBuilds()}
 function clientSlug(x){return String(x||'client').toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g,'-').replace(/^-+|-+$/g,'').slice(0,42)||'client'}
 function initClientBuildManager(){const box=$('clientBuildBrands');if(!box)return;box.innerHTML=brands.map((b,i)=>`<label class="client-brand-pick"><input type="checkbox" class="client-brand-check" value="${i}"> <span>${esc(b.name)}</span></label>`).join('');renderClientBuilds()}
-function selectAllClientBrands(v){document.querySelectorAll('.client-brand-check').forEach(x=>x.checked=!!v)}
+function selectAllClientBrands(v){
+  document.querySelectorAll('.client-brand-check').forEach(x=>x.checked=!!v);
+  if(typeof renderClientSelectionTree==='function') renderClientSelectionTree();
+}
 function renderClientBuilds(){const box=$('clientBuildList');if(!box)return;const arr=clientBuilds();if(!arr.length){box.innerHTML='<p class="admin-hint">لا توجد نسخ عملاء حتى الآن.</p>';return}box.innerHTML=arr.map((c,i)=>`<div class="client-card"><strong>${esc(c.name)}</strong><div class="admin-hint">ID: ${esc(c.id)}</div><div class="admin-hint">${c.brands.map(esc).join(' + ')}</div><div class="client-actions"><button class="admin-btn admin-blue" onclick="exportSavedClientBuild(${i})">⬇ تصدير</button><button class="admin-btn admin-muted" onclick="copyClientBuildLink(${i})">🔗 نسخ الرابط</button><button class="admin-btn admin-danger" onclick="deleteClientBuild(${i})">حذف</button></div></div>`).join('')}
 function cloneCatalogBrandsForClient(selectedNames,selectionMap){
   const allowed=new Set((selectedNames||[]).map(v=>String(v).trim().toLowerCase()));
@@ -545,7 +548,7 @@ function cloneCatalogBrandsForClient(selectedNames,selectionMap){
     const out=JSON.parse(JSON.stringify(b));
     out.products=(b.products||[]).filter((p,pi)=>{
       const pm=productMap[String(pi)];
-      return pm && pm.selected && (pm.sizes||{}).length!==0;
+      return pm && pm.selected && Object.keys(pm.sizes||{}).length>0;
     }).map((p)=>{
       const originalIndex=b.products.indexOf(p);
       const pm=productMap[String(originalIndex)];
@@ -644,7 +647,7 @@ async function createClientBuild(){
   }catch(e){console.error('Unable to persist client snapshot',e);alert('تعذر حفظ لقطة الكاتالوغ الحالية.');return}
   const base=clientSlug(name),arr=clientBuilds();let id=base,n=2;
   while(arr.some(c=>c.id===id)){id=base+'-'+n++}
-  const rec={id,name,brands:catalog.map(b=>b.name),createdAt:new Date().toISOString(),status:'pending',catalogSnapshot:true,catalogSnapshotVersion:2};
+  const rec={id,name,brands:catalog.map(b=>b.name),catalog:JSON.parse(JSON.stringify(catalog)),createdAt:new Date().toISOString(),status:'pending',catalogSnapshot:true,catalogSnapshotVersion:2};
   arr.push(rec);saveClientBuilds(arr);
   const title='[JASMINE CLIENT] '+name;
   const body=['CLIENT_ID: '+id,'CLIENT_NAME: '+name,'BRANDS_JSON: '+JSON.stringify(rec.brands),'CATALOG_JSON: '+JSON.stringify(catalog),'CATALOG_SNAPSHOT_VERSION: 2','','هذه الطلبية تحتوي على لقطة مباشرة من الكاتالوغ الحالي مع تخصيص الأصناف والأحجام والروائح المحددة لكل ماركة.','يجب نشر نسخة العميل بهذه البيانات فقط، دون الرجوع إلى الكاتالوغ الأصلي.'].join('\n');
@@ -655,7 +658,40 @@ async function createClientBuild(){
   renderClientSelectionTree();
   showStatus('clientBuildStatus','تم تجهيز لقطة العميل المخصصة وإرسال طلب النشر.');
 }
-async function exportSavedClientBuild(i){const c=clientBuilds()[i];if(!c)return;await exportClientBuildByNames(c.brands,'Jasmine_Order_'+c.id+'.html')}
+async function exportSavedClientBuild(i){
+  const c=clientBuilds()[i]; if(!c)return;
+  if(Array.isArray(c.catalog)&&c.catalog.length){
+    await exportClientBuildFromCatalog(c.catalog,'Jasmine_Order_'+c.id+'.html');
+    return;
+  }
+  await exportClientBuildByNames(c.brands,'Jasmine_Order_'+c.id+'.html');
+}
+async function exportClientBuildFromCatalog(catalog,suggested){
+  try{
+    const snapshot=JSON.parse(JSON.stringify(catalog||[])).filter(b=>b&&Array.isArray(b.products)&&b.products.length);
+    if(!snapshot.length){alert('لا توجد بيانات صالحة في لقطة العميل.');return;}
+    const root=document.documentElement.cloneNode(true);
+    root.querySelectorAll('.admin-launch,#adminPanel').forEach(el=>el.remove());
+    root.querySelectorAll('.modal.show').forEach(el=>el.classList.remove('show'));
+    root.setAttribute('data-client-build','true');
+    const script=root.querySelector('script'); if(!script)throw new Error('Main application script not found');
+    let js=script.textContent;
+    const dataStart=js.indexOf('const DATA='), dataEnd=js.indexOf(';function displaySize',dataStart);
+    if(dataStart<0||dataEnd<0)throw new Error('Catalog DATA marker not found');
+    const clientData={settings:DATA.settings,brands:snapshot};
+    const literal=JSON.stringify(clientData).replace(/<\\/script/gi,'<\\\\/script');
+    js=js.slice(0,dataStart)+'const DATA='+literal+js.slice(dataEnd);
+    js += "\nfunction getVisibleBrandNames(){return brands.map(b=>b.name);}\nfunction visibleBrandIndexes(){return brands.map((_,i)=>i);}\nfunction loadSavedAdminData(){return;}\n";
+    js=js.replace(/document\\.addEventListener\\('DOMContentLoaded',\\(\\)=>\\{try\\{loadSavedAdminData\\(\\);applyPackagingDefaults\\(\\);persistCatalog\\(\\);applyUISettings\\(\\);initProductSelectors\\(\\);fillBrands\\(\\);render\\(\\);translateHome\\(\\);\\}catch\\(e\\)\\{console\\.error\\('JASMINE initialization error',e\\);\\}\\}\\);/,
+      "document.addEventListener('DOMContentLoaded',()=>{try{initProductSelectors();fillBrands();render();translateHome();}catch(e){console.error('JASMINE client initialization error',e);}});");
+    js=js.replace(/window\\.openAdmin\\s*=\\s*[^;]+;/g,'window.openAdmin=()=>{};');
+    script.textContent=js;
+    const html='<!doctype html>\\n'+root.outerHTML;
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    downloadBlob(blob,suggested);
+    showStatus('clientBuildStatus','تم تصدير نسخة العميل المخصصة بنجاح.');
+  }catch(e){console.error('exportClientBuildFromCatalog',e);alert('تعذر تصدير نسخة العميل: '+(e?.message||'خطأ غير معروف'))}
+}
 function deleteClientBuild(i){const arr=clientBuilds();if(!arr[i])return;if(!confirm('حذف نسخة العميل '+arr[i].name+'؟'))return;arr.splice(i,1);saveClientBuilds(arr)}
 async function copyClientBuildLink(i){const c=clientBuilds()[i];if(!c)return;const url=new URL('./clients/'+encodeURIComponent(c.id)+'.html',document.baseURI).href;try{await navigator.clipboard.writeText(url);showStatus('clientBuildStatus','تم نسخ الرابط النهائي: '+url)}catch(e){prompt('رابط العميل:',url)}}
 async function exportClientBuildByNames(selectedNames,suggested){try{const allBrands=JSON.parse(JSON.stringify(brands));const allowed=new Set((selectedNames||[]).map(v=>String(v).trim().toLowerCase()));const filteredBrands=allBrands.filter(b=>allowed.has(String(b.name).trim().toLowerCase()));if(!filteredBrands.length){alert('لا توجد ماركات صالحة في هذه النسخة.');return}const root=document.documentElement.cloneNode(true);root.querySelectorAll('.admin-launch,#adminPanel').forEach(el=>el.remove());root.querySelectorAll('.modal.show').forEach(el=>el.classList.remove('show'));root.setAttribute('data-client-build','true');const script=root.querySelector('script');if(!script)throw new Error('Main application script not found');let js=script.textContent;const dataStart=js.indexOf('const DATA=');const dataEnd=js.indexOf(';function displaySize',dataStart);if(dataStart<0||dataEnd<0)throw new Error('Catalog DATA marker not found');const clientData={settings:DATA.settings,brands:filteredBrands};const dataLiteral=JSON.stringify(clientData).replace(/<\/script/gi,'<\\/script');js=js.slice(0,dataStart)+'const DATA='+dataLiteral+js.slice(dataEnd);js+='\nfunction getVisibleBrandNames(){return brands.map(b=>b.name);}\nfunction visibleBrandIndexes(){return brands.map((_,i)=>i);}\nfunction loadSavedAdminData(){return;}\n';js=js.replace(/document\.addEventListener\('DOMContentLoaded',[\s\S]*?\);\s*<\\\/script>/,'');js=js.replace(/document\.addEventListener\('DOMContentLoaded',\(\)=>\{try\{loadSavedAdminData\(\);applyPackagingDefaults\(\);persistCatalog\(\);applyUISettings\(\);initProductSelectors\(\);fillBrands\(\);render\(\);translateHome\(\);\}catch\(e\)\{console\.error\('JASMINE initialization error',e\);\}\}\);/,'document.addEventListener(\'DOMContentLoaded\',()=>{try{initProductSelectors();fillBrands();render();translateHome();}catch(e){console.error(\'JASMINE client initialization error\',e);}});');js=js.replace(/window\.openAdmin\s*=\s*[^;]+;/g,'window.openAdmin=()=>{};');script.textContent=js;root.querySelectorAll('style').forEach(st=>{st.textContent=st.textContent.replace(/[^{}]*\.admin(?:-[A-Za-z0-9_]+)?[^{}]*\{[^{}]*\}/g,'')});const html='<!doctype html>\n'+root.outerHTML;const blob=new Blob([html],{type:'text/html;charset=utf-8'});if(window.showSaveFilePicker){try{const h=await window.showSaveFilePicker({suggestedName:suggested,types:[{description:'Jasmine Client HTML',accept:{'text/html':['.html']}}]});const w=await h.createWritable();await w.write(blob);await w.close();showStatus('clientBuildStatus','تم تصدير نسخة العميل بنجاح.');return}catch(e){if(e?.name==='AbortError')return}}downloadBlob(blob,suggested);showStatus('clientBuildStatus','تم تصدير نسخة العميل بنجاح.')}catch(e){console.error('exportClientBuildByNames',e);alert('تعذر إنشاء نسخة العميل: '+(e?.message||'خطأ غير معروف'))}}
