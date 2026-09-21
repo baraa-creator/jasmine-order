@@ -96,4 +96,3 @@ jobs:
               raise SystemExit("V2 fragrance selection failed for Reed Diffuser")
           print("Selection V2 integration test passed")
           PY
-          PY
