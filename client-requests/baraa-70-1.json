@@ -1,0 +1,34 @@
+{
+  "id": "baraa-70-1",
+  "name": "Baraa 70.1",
+  "brands": [
+    "Vilara"
+  ],
+  "catalog": [
+    {
+      "name": "Vilara",
+      "products": [
+        {
+          "name": "Ca Freshener",
+          "sizes": [
+            {
+              "name": "8",
+              "fragrances": [
+                "Lavender",
+                "Lemon",
+                "Ocean",
+                "Rose",
+                "Zambak",
+                "Cherry",
+                "Peach",
+                "Mango",
+                "Gum"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "catalogSnapshotVersion": 2
+}
