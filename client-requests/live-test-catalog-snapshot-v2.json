@@ -1,0 +1,43 @@
+{
+  "id": "live-test-catalog-snapshot-v2",
+  "name": "LIVE TEST — Catalog Snapshot V2",
+  "brands": [
+    "Vilara"
+  ],
+  "catalog": [
+    {
+      "name": "Vilara",
+      "products": [
+        {
+          "name": "Room Spray",
+          "sizes": [
+            {
+              "name": "300",
+              "fragrances": [
+                "Strawberry",
+                "Spring",
+                "Royal Scent",
+                "Royal Oud",
+                "Red Rose"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Reed Diffuser",
+          "sizes": [
+            {
+              "name": "110",
+              "fragrances": [
+                "Tulip",
+                "Royal Oud",
+                "Caramel",
+                "Black Angel"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
