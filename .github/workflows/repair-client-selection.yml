@@ -1,0 +1,167 @@
+name: Repair Client Selection UI
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  repair:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch client selection
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+
+          path = Path("index.html")
+          html = path.read_text(encoding="utf-8")
+
+          if "clientSelectionTree" in html:
+              print("Client selection patch already present.")
+              raise SystemExit(0)
+
+          css = r'''<style id="client-selection-css">
+          .client-selection{margin-top:14px;border:1px solid #e3c27a;border-radius:12px;background:linear-gradient(180deg,#fffaf0,#fff);padding:14px}
+          .client-selection-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+          .client-selection-head h4{margin:0;font-size:16px}
+          .client-selection-help{font-size:12px;color:#60708a;line-height:1.7;margin:4px 0 10px}
+          .client-selection-brand{border:1px solid #dbe3ec;border-radius:10px;background:#fff;margin:8px 0;overflow:hidden}
+          .client-selection-brand>summary{cursor:pointer;padding:10px 12px;font-weight:900;background:#f8fafc;list-style:none}
+          .client-selection-product{margin:8px 10px;border:1px solid #e5eaf0;border-radius:9px;background:#fbfdff}
+          .client-selection-product>summary{cursor:pointer;padding:8px 10px;font-weight:800;list-style:none}
+          .client-selection-check{display:flex;align-items:center;gap:7px;padding:7px 10px}
+          .client-selection-check input{width:17px;height:17px;accent-color:var(--gold)}
+          .client-selection-sizes{padding:0 8px 8px}
+          .client-selection-size{border-top:1px solid #edf1f5;padding:6px 0}
+          .client-selection-size-title{display:flex;align-items:center;gap:7px;font-weight:700;padding:5px 2px}
+          .client-selection-frags{display:flex;flex-wrap:wrap;gap:6px;padding:4px 8px 4px 26px}
+          .client-selection-frags .client-selection-check{padding:5px 8px;background:#f7f9fb;border:1px solid #e1e7ee;border-radius:8px}
+          .client-selection-empty{padding:12px;color:#8a6b2a;background:#fff9e9;border:1px dashed #d9b86b;border-radius:9px}
+          </style>'''
+          html = html.replace("</head>", css + "</head>", 1)
+
+          functions = r'''function cloneCatalogBrandsForClient(selectedNames,selectionMap){
+            const allowed=new Set((selectedNames||[]).map(v=>String(v).trim().toLowerCase()));
+            const map=selectionMap||{};
+            return brands.filter(b=>allowed.has(String(b.name).trim().toLowerCase())).map(b=>{
+              const bm=map[String(b.name).trim().toLowerCase()];
+              if(!bm || bm.mode==='all') return JSON.parse(JSON.stringify(b));
+              const out=JSON.parse(JSON.stringify(b));
+              out.products=(b.products||[]).filter((p,pi)=>{
+                const pm=bm.products?.[String(pi)];
+                return pm && pm.selected && Object.keys(pm.sizes||{}).length>0;
+              }).map(p=>{
+                const pi=b.products.indexOf(p), pm=bm.products[String(pi)], cp=JSON.parse(JSON.stringify(p));
+                cp.sizes=(p.sizes||[]).filter((s,si)=>pm.sizes?.[String(si)] && pm.sizes[String(si)].fragrances?.length).map(s=>{
+                  const si=p.sizes.indexOf(s), sm=pm.sizes[String(si)], cs=JSON.parse(JSON.stringify(s));
+                  cs.fragrances=(s.fragrances||[]).filter((_,fi)=>sm.fragrances.includes(fi));
+                  return cs;
+                });
+                return cp;
+              });
+              return out;
+            }).filter(b=>b.products?.length);
+          }
+          function renderClientSelectionTree(){
+            const box=$('clientSelectionTree'); if(!box)return;
+            const checks=[...document.querySelectorAll('.client-brand-check:checked')];
+            if(!checks.length){box.innerHTML='<div class="client-selection-empty">اختر ماركة واحدة على الأقل، ثم ستظهر هنا خيارات الأصناف والأحجام والروائح.</div>';return;}
+            box.innerHTML=checks.map(cb=>{
+              const bi=Number(cb.value),b=brands[bi];
+              const products=(b.products||[]).map((p,pi)=>{
+                const sizes=(p.sizes||[]).map((s,si)=>{
+                  const fr=(s.fragrances||[]).map((f,fi)=>'<label class="client-selection-check"><input type="checkbox" class="client-frag-check" data-b="'+bi+'" data-p="'+pi+'" data-s="'+si+'" data-f="'+fi+'" checked><span>'+esc(f)+'</span></label>').join('');
+                  return '<div class="client-selection-size"><label class="client-selection-size-title"><input type="checkbox" class="client-size-check" data-b="'+bi+'" data-p="'+pi+'" data-s="'+si+'" checked onchange="toggleClientSizeFragrances(this)"><span>'+esc(displaySize(s.name))+'</span></label><div class="client-selection-frags">'+fr+'</div></div>';
+                }).join('');
+                return '<details class="client-selection-product" open><summary><label class="client-selection-check" style="display:inline-flex;padding:0"><input type="checkbox" class="client-product-check" data-b="'+bi+'" data-p="'+pi+'" checked onchange="toggleClientProductChildren(this)"><span>'+esc(p.name)+'</span></label></summary><div class="client-selection-sizes">'+sizes+'</div></details>';
+              }).join('');
+              return '<details class="client-selection-brand" open><summary>'+esc(b.name)+'</summary><div style="padding:6px 8px">'+products+'</div></details>';
+            }).join('');
+          }
+          function toggleClientProductChildren(el){
+            const b=el.dataset.b,p=el.dataset.p;
+            document.querySelectorAll('.client-size-check[data-b="'+b+'"][data-p="'+p+'"],.client-frag-check[data-b="'+b+'"][data-p="'+p+'"]').forEach(x=>x.checked=el.checked);
+          }
+          function toggleClientSizeFragrances(el){
+            const b=el.dataset.b,p=el.dataset.p,s=el.dataset.s;
+            document.querySelectorAll('.client-frag-check[data-b="'+b+'"][data-p="'+p+'"][data-s="'+s+'"]').forEach(x=>x.checked=el.checked);
+          }
+          function buildClientSelectionMap(){
+            const map={};
+            document.querySelectorAll('.client-brand-check:checked').forEach(cb=>{
+              const bi=Number(cb.value),b=brands[bi],products={};
+              (b.products||[]).forEach((p,pi)=>{
+                const pc=document.querySelector('.client-product-check[data-b="'+bi+'"][data-p="'+pi+'"]');
+                if(!pc)return;
+                const sizes={};
+                (p.sizes||[]).forEach((s,si)=>{
+                  const sc=document.querySelector('.client-size-check[data-b="'+bi+'"][data-p="'+pi+'"][data-s="'+si+'"]');
+                  if(!sc?.checked)return;
+                  const fragrances=[...document.querySelectorAll('.client-frag-check[data-b="'+bi+'"][data-p="'+pi+'"][data-s="'+si+'"]:checked')].map(x=>Number(x.dataset.f));
+                  if(fragrances.length)sizes[String(si)]={selected:true,fragrances};
+                });
+                products[String(pi)]={selected:pc.checked,sizes};
+              });
+              const all=(b.products||[]).every((p,pi)=>products[String(pi)]?.selected && (p.sizes||[]).every((s,si)=>products[String(pi)].sizes[String(si)]?.fragrances?.length===(s.fragrances||[]).length));
+              map[String(b.name).trim().toLowerCase()]={mode:all?'all':'partial',products};
+            });
+            return map;
+          }
+          function initClientBuildManager(){
+            const box=$('clientBuildBrands');if(!box)return;
+            box.innerHTML=brands.map((b,i)=>'<label class="client-brand-pick"><input type="checkbox" class="client-brand-check" value="'+i+'" onchange="renderClientSelectionTree()"><span>'+esc(b.name)+'</span></label>').join('');
+            renderClientSelectionTree();renderClientBuilds();
+          }
+          function selectAllClientBrands(v){
+            document.querySelectorAll('.client-brand-check').forEach(x=>x.checked=!!v);
+            renderClientSelectionTree();
+          }
+          '''
+          pattern=r"function initClientBuildManager\(\)\{.*?\nfunction selectAllClientBrands\(v\)\{.*?\n\}"
+          html,n=re.subn(pattern,functions,html,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit("Could not locate client manager functions.")
+
+          marker='''<div><label style="display:block;margin-top:12px;font-weight:800">الماركات</label><div class="client-grid" id="clientBuildBrands"></div></div>'''
+          replacement=marker+'''<div class="client-selection"><div class="client-selection-head"><h4>🎯 تخصيص محتوى النسخة</h4><span class="admin-hint">حدد الأصناف والأحجام والروائح التي تريد ظهورها للعميل.</span></div><p class="client-selection-help">عند اختيار ماركة ستظهر هنا أصنافها ثم أحجامها ثم روائحها. يمكنك إلغاء أي مستوى ولن يدخل في نسخة العميل.</p><div id="clientSelectionTree"></div></div>'''
+          if marker not in html:
+              raise SystemExit("Could not locate client brand UI.")
+          html=html.replace(marker,replacement,1)
+
+          old_create=r"function createClientBuild\(\)\{.*?\n\}\nasync function exportSavedClientBuild"
+          new_create=r'''function createClientBuild(){
+            const name=($('clientBuildName')?.value||'').trim();
+            const checks=[...document.querySelectorAll('.client-brand-check:checked')];
+            if(!name){alert('أدخل اسم العميل أولاً.');return}
+            if(!checks.length){alert('اختر ماركة واحدة على الأقل.');return}
+            const selectedNames=checks.map(x=>brands[Number(x.value)]?.name).filter(Boolean);
+            const selectionMap=buildClientSelectionMap();
+            const catalog=cloneCatalogBrandsForClient(selectedNames,selectionMap);
+            if(!catalog.length){alert('لم يبقَ أي محتوى صالح في الاختيارات.');return}
+            const base=clientSlug(name),arr=clientBuilds();let id=base,n=2;
+            while(arr.some(c=>c.id===id))id=base+'-'+n++;
+            const rec={id,name,brands:catalog.map(b=>b.name),createdAt:new Date().toISOString(),catalogSnapshot:true,catalogSnapshotVersion:2,catalog:catalog};
+            arr.push(rec);saveClientBuilds(arr);
+            if($('clientBuildName'))$('clientBuildName').value='';
+            document.querySelectorAll('.client-brand-check').forEach(x=>x.checked=false);
+            renderClientSelectionTree();
+            showStatus('clientBuildStatus','تم إنشاء نسخة العميل مع تخصيص الأصناف والأحجام والروائح.');
+          }
+          async function exportSavedClientBuild'''
+          html,n=re.subn(old_create,new_create,html,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit("Could not locate createClientBuild.")
+          
+          path.write_text(html,encoding="utf-8")
+          subprocess.run(["git","config","user.name","github-actions[bot]"],check=True)
+          subprocess.run(["git","config","user.email","41898282+github-actions[bot]@users.noreply.github.com"],check=True)
+          subprocess.run(["git","add","index.html"],check=True)
+          subprocess.run(["git","commit","-m","Fix client product size fragrance selector"],check=True)
+          subprocess.run(["git","push"],check=True)
+          print("Client selection UI repaired and committed.")
+          PY
