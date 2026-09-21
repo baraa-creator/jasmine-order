@@ -2,38 +2,12 @@
   "id": "client-test-001",
   "name": "Test Client 001",
   "brands": [
-    "Vilara"
+    "JASMINE"
   ],
   "catalog": [
     {
-      "name": "Vilara",
-      "products": [
-        {
-          "name": "Room Spray",
-          "sizes": [
-            {
-              "name": "300",
-              "fragrances": [
-                "Strawberry",
-                "Spring",
-                "Royal Scent"
-              ]
-            }
-          ]
-        },
-        {
-          "name": "Reed Diffuser",
-          "sizes": [
-            {
-              "name": "110",
-              "fragrances": [
-                "Tulip",
-                "Royal Oud"
-              ]
-            }
-          ]
-        }
-      ]
+      "name": "JASMINE",
+      "products": []
     }
   ],
   "catalogSnapshotVersion": 1
