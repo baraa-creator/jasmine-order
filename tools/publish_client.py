@@ -32,21 +32,29 @@ except json.JSONDecodeError as exc:
 # reappear in a newly generated client merely because index.html still contains
 # the master/original catalog.
 snapshot = request.get("catalog")
-if isinstance(snapshot, list) and snapshot:
-    filtered = [
-        b for b in snapshot
-        if isinstance(b, dict)
-        and str(b.get("name", "")).strip().lower() in selected
-    ]
-else:
-    brands = data.get("brands", [])
-    filtered = [
-        b for b in brands
-        if str(b.get("name", "")).strip().lower() in selected
-    ]
+snapshot_version = request.get("catalogSnapshotVersion") or request.get("catalog_snapshot_version")
+if not isinstance(snapshot, list) or not snapshot:
+    raise SystemExit(
+        "CATALOG_JSON is required for client publishing. "
+        "Refusing to fall back to the master catalog because that could publish deleted products/sizes/fragrances."
+    )
+if str(snapshot_version or "1") != "1":
+    raise SystemExit(f"Unsupported catalog snapshot version: {snapshot_version}")
+
+snapshot_names = {str(b.get("name", "")).strip().lower() for b in snapshot if isinstance(b, dict)}
+if snapshot_names != selected:
+    raise SystemExit(
+        f"CATALOG_JSON brand mismatch. Selected={sorted(selected)} Snapshot={sorted(snapshot_names)}"
+    )
+
+filtered = [
+    b for b in snapshot
+    if isinstance(b, dict)
+    and str(b.get("name", "")).strip().lower() in selected
+]
 
 if not filtered:
-    raise SystemExit("No selected brands exist in the client request/master catalog")
+    raise SystemExit("No selected brands exist in the client catalog snapshot")
 
 client_data = {
     "settings": data.get("settings", {}),
