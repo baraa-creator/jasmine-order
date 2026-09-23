@@ -1,0 +1,119 @@
+{
+  "id": "syria-jasmine-order-1-2",
+  "name": "Syria Jasmine Order 1.2",
+  "brands": [
+    "JASMINE"
+  ],
+  "catalog": [
+    {
+      "name": "JASMINE",
+      "products": [
+        {
+          "name": "Room Spray",
+          "sizes": [
+            {
+              "name": "260",
+              "fragrances": [
+                "Kaaba Curtain",
+                "Taksim Square",
+                "Crystal",
+                "Lavender flower",
+                "Bouquet Flower",
+                "Ocean",
+                "Magnolia Flower",
+                "Bursa Flower",
+                "Gum",
+                "Istanbul Flower",
+                "Jasmine",
+                "Jozor Al Oud",
+                "Mango",
+                "Peach",
+                "Strawberry"
+              ],
+              "piecesPerBox": 24,
+              "boxesPerPallet": 90,
+              "kgPerBox": 6.5
+            },
+            {
+              "name": "500",
+              "fragrances": [
+                "Crystal",
+                "Taksim Square",
+                "Ocean",
+                "Lavender flower",
+                "Magnolia Flower",
+                "Strawberry",
+                "Royal Scent",
+                "Peach",
+                "Mango",
+                "Jozor Al Oud",
+                "Jasmine",
+                "Istanbul Flower",
+                "Gum",
+                "Bursa Flower",
+                "Kaaba Curtain"
+              ],
+              "piecesPerBox": 25,
+              "boxesPerPallet": 48,
+              "kgPerBox": 13.15
+            }
+          ]
+        },
+        {
+          "name": "Reed Diffuser",
+          "sizes": [
+            {
+              "name": "110",
+              "fragrances": [
+                "Blueberry",
+                "Strawberry",
+                "Istanbul",
+                "Lemon",
+                "Jasmine",
+                "Vanilla",
+                "Peach",
+                "Ocean",
+                "Mango",
+                "Lavender",
+                "Gum",
+                "Angel",
+                "Papatya",
+                "Love",
+                "Ihsas",
+                "Taksim",
+                "Crystal",
+                "Sea Breeze",
+                "Cherry",
+                "Kiwi & Watermelon"
+              ],
+              "piecesPerBox": 24,
+              "boxesPerPallet": 182,
+              "kgPerBox": 5.7
+            }
+          ]
+        },
+        {
+          "name": "Car Freshner",
+          "sizes": [
+            {
+              "name": "8",
+              "fragrances": [
+                "Crystal",
+                "Jasmine",
+                "Papatya",
+                "Blueberry",
+                "Ocean",
+                "Istanbul",
+                "Gum",
+                "Mango",
+                "Lavender",
+                "Zanbak"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "catalogSnapshotVersion": 2
+}
